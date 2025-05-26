@@ -53,7 +53,7 @@ function renderClasses() {
           <h6>${name}</h6>
           <div class="mt-2">
             <button class="btn btn-sm btn-danger" onclick="removeClass(${id},'${name}')">Remove</button>
-            <a class="btn btn-sm btn-success ms-2" href="/class.html?id=${id}">Go</a>
+            <a class="btn btn-sm btn-success ms-2" href="/class.html?id=${id}">Open</a>
           </div>
         </div>
       </div>`;

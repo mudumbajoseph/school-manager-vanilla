@@ -1,6 +1,7 @@
 let classId;
 let className;
 let db, SQL;
+let nameL = "";
 
 (async function init() {
   try {
@@ -57,10 +58,10 @@ function renderStudents() {
         <div class="card-body text-center">
           <strong>${name}</strong><br>
           DOB: ${dob}<br>
-          <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${id})">+ Payment</button>
-          <button class="btn btn-sm btn-outline-primary mt-2 ms-1" onclick="viewPaymentHistory(${id},'${name}')"> History</button>
+          <button class="btn btn-sm btn-outline-primary mt-2 ms-1" onclick="viewPaymentHistory(${id},'${name}')">Payments</button>
         </div>
       </div>`;
+          // <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${id})">+ Payment</button>
 
     studentList.appendChild(div);
   });
@@ -106,7 +107,9 @@ function submitPayment(event) {
 
   db.run(`INSERT INTO payments (student_id, amount, date, for_what) VALUES (?, ?, ?, ?)`, [studentId, amount, date, forWhat]);
   saveToLocal();
+  event.target.reset();
   bootstrap.Modal.getInstance(document.getElementById("paymentModal")).hide();
+  viewPaymentHistory(studentId, nameL);
 }
 
 function saveToLocal() {
@@ -124,7 +127,7 @@ function viewPaymentHistory(studentId, name) {
     SELECT amount, date, for_what
     FROM payments
     WHERE student_id = ?
-    ORDER BY date DESC
+    ORDER BY date ASC
   `, [studentId]);
 
   const rows = result[0]?.values || [];
@@ -132,10 +135,11 @@ function viewPaymentHistory(studentId, name) {
   if (rows.length === 0) {
     historyList.innerHTML = `<li class="list-group-item">No payments made yet for ${name}</li>
     <br>
-    <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${studentId})">+ Payment</button>
+    <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${studentId});hideHistoryModal();setName('${name}');">+ Payment</button>
     `;
   } else {
-    historyList.innerHTML = `<h3>For ${name}</h3>`;
+    historyList.innerHTML = `<h3>For ${name}</h3>
+    <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${studentId});hideHistoryModal();setName('${name}');">+ Payment</button>`;
     rows.forEach(([amount, date, for_what]) => {
       const li = document.createElement("li");
       li.className = "list-group-item d-flex justify-content-between";
@@ -147,3 +151,13 @@ function viewPaymentHistory(studentId, name) {
   new bootstrap.Modal(document.getElementById("historyModal")).show();
 }
 
+
+function hideHistoryModal() {
+  const modalEl = document.getElementById("historyModal");
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  if (modal) modal.hide();
+}
+
+function setName(name) {
+  nameL = name;
+}
