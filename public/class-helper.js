@@ -22,7 +22,7 @@ let db, SQL;
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         student_id INTEGER NOT NULL,
         amount INTEGER NOT NULL,
-        for TEXT,
+        for_what TEXT default 'fees',
         date TEXT NOT NULL
       );
     `);
@@ -46,7 +46,7 @@ function renderStudents() {
   const studentList = document.getElementById("studentList");
   studentList.innerHTML = "";
 
-  const result = db.exec("SELECT * FROM students WHERE class_id = ?", [classId]);
+  const result = db.exec("SELECT * FROM students WHERE class_id = ? ORDER BY name ASC", [classId]);
   const students = result[0]?.values || [];
 
   students.forEach(([id, name, dob]) => {
@@ -97,8 +97,14 @@ function submitPayment(event) {
   const studentId = document.getElementById("paymentStudentId").value;
   const amount = parseInt(document.getElementById("paymentAmount").value);
   const date = document.getElementById("paymentDate").value;
+  const forWhat = document.querySelector('input[name="for_what"]:checked').value;
 
-  db.run(`INSERT INTO payments (student_id, amount, date) VALUES (?, ?, ?)`, [studentId, amount, date]);
+  if (!studentId || !amount || !date) {
+    alert("Please fill all fields.");
+    return;
+  }
+
+  db.run(`INSERT INTO payments (student_id, amount, date, for_what) VALUES (?, ?, ?, ?)`, [studentId, amount, date, forWhat]);
   saveToLocal();
   bootstrap.Modal.getInstance(document.getElementById("paymentModal")).hide();
 }
@@ -115,7 +121,7 @@ function viewPaymentHistory(studentId, name) {
   historyList.innerHTML = "";
 
   const result = db.exec(`
-    SELECT amount, date
+    SELECT amount, date, for_what
     FROM payments
     WHERE student_id = ?
     ORDER BY date DESC
@@ -124,13 +130,16 @@ function viewPaymentHistory(studentId, name) {
   const rows = result[0]?.values || [];
 
   if (rows.length === 0) {
-    historyList.innerHTML = `<li class="list-group-item">No payments made yet for ${name}</li>`;
+    historyList.innerHTML = `<li class="list-group-item">No payments made yet for ${name}</li>
+    <br>
+    <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${studentId})">+ Payment</button>
+    `;
   } else {
     historyList.innerHTML = `<h3>For ${name}</h3>`;
-    rows.forEach(([amount, date]) => {
+    rows.forEach(([amount, date, for_what]) => {
       const li = document.createElement("li");
       li.className = "list-group-item d-flex justify-content-between";
-      li.innerHTML = `<span>${date}</span><strong>$${amount}</strong>`;
+      li.innerHTML = `<span>${date}</span><strong>Ugx${amount}</strong><span>for ${for_what}</span>`;
       historyList.appendChild(li);
     });
   }

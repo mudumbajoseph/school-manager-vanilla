@@ -52,7 +52,7 @@ function renderClasses() {
         <div class="card-body text-center">
           <h6>${name}</h6>
           <div class="mt-2">
-            <button class="btn btn-sm btn-danger" onclick="removeClass(${id})">Remove</button>
+            <button class="btn btn-sm btn-danger" onclick="removeClass(${id},'${name}')">Remove</button>
             <a class="btn btn-sm btn-success ms-2" href="/class.html?id=${id}">Go</a>
           </div>
         </div>
@@ -61,10 +61,13 @@ function renderClasses() {
   });
 }
 
-function removeClass(id) {
-  db.run(`DELETE FROM classes WHERE id = ?`, [id]);
-  saveToLocal();
-  renderClasses();
+function removeClass(id, name) {
+  const answer = confirm(`Are you sure you want to delete ${name} class?`);
+  if (answer) {
+    db.run(`DELETE FROM classes WHERE id = ?`, [id]);
+    saveToLocal();
+    renderClasses();
+  }
 }
 
 function backup() {
@@ -98,7 +101,7 @@ async function clearAppCache() {
   }
 
   // Clear localStorage (SQL.js database)
-//   localStorage.removeItem("school-database");
+  localStorage.removeItem("school-database");
 
   // Optionally, unregister service workers
   if ('serviceWorker' in navigator) {
