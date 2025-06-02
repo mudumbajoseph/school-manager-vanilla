@@ -112,7 +112,6 @@ async function clearAppCache() {
   }
 
   alert("Cache and local data cleared. Reloading...");
-  location.reload();
 }
 
 
@@ -126,4 +125,35 @@ function installApp(){
         console.error('Service Worker registration failed:', error);
       });
   }
+}
+
+function globalStudentSearch() {
+  const query = document.getElementById("globalSearch").value.trim();
+  const resultBox = document.getElementById("searchResults");
+  resultBox.innerHTML = "";
+
+  if (!query) return;
+
+  const result = db.exec(`
+    SELECT students.id, students.name, students.class_id, classes.name
+    FROM students
+    JOIN classes ON students.class_id = classes.id
+    WHERE students.name LIKE ?
+    ORDER BY students.name ASC
+  `, [`%${query}%`]);
+
+  const matches = result[0]?.values || [];
+
+  if (matches.length === 0) {
+    resultBox.innerHTML = `<div class="list-group-item">No matches</div>`;
+    return;
+  }
+
+  matches.forEach(([studentId, studentName, classId, className]) => {
+    const item = document.createElement("a");
+    item.href = `/class.html?id=${classId}&student=${studentId}`;
+    item.className = "list-group-item list-group-item-action";
+    item.textContent = `${studentName} (${className})`;
+    resultBox.appendChild(item);
+  });
 }

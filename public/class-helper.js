@@ -28,44 +28,106 @@ let nameL = "";
       );
     `);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    classId = urlParams.get("id");
+      const urlParams = new URLSearchParams(window.location.search);
+      classId = urlParams.get("id");
+      const studentIdParam = urlParams.get("student");
 
-    if (!classId) return alert("Class ID missing.");
+      if (!classId) return alert("Class ID missing.");
 
-    const result = db.exec("SELECT name FROM classes WHERE id = ?", [classId]);
-    className = result[0]?.values?.[0]?.[0];
-    document.getElementById("className").textContent = `Class: ${className}`;
+      const result = db.exec("SELECT name FROM classes WHERE id = ?", [classId]);
+      className = result[0]?.values?.[0]?.[0];
+      document.getElementById("className").textContent = `Class: ${className}`;
 
-    renderStudents();
+      if (studentIdParam) {
+        renderStudentById(studentIdParam);
+      } else {
+        renderStudents();
+      }
+
   } catch (e) {
     alert("Error: " + e.message);
   }
 })();
 
-function renderStudents() {
+// function renderStudents() {
+//   const studentList = document.getElementById("studentList");
+//   studentList.innerHTML = "";
+
+//   const result = db.exec("SELECT * FROM students WHERE class_id = ? ORDER BY name ASC", [classId]);
+//   const students = result[0]?.values || [];
+
+//   students.forEach(([id, name, dob]) => {
+//     const div = document.createElement("div");
+//     div.className = "col-12 col-md-6 col-lg-4 col-xl-3";
+//     div.innerHTML = `
+//       <div class="card p-2 shadow-sm">
+//         <div class="card-body text-center">
+//           <strong>${name}</strong><br>
+//           DOB: ${dob}<br>
+//           <button class="btn btn-sm btn-outline-primary mt-2 ms-1" onclick="viewPaymentHistory(${id},'${name}')">Payments</button>
+//         </div>
+//       </div>`;
+//           // <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${id})">+ Payment</button>
+
+//     studentList.appendChild(div);
+//   });
+// }
+
+function renderStudentById(studentId) {
   const studentList = document.getElementById("studentList");
   studentList.innerHTML = "";
 
-  const result = db.exec("SELECT * FROM students WHERE class_id = ? ORDER BY name ASC", [classId]);
+  const result = db.exec("SELECT id, name, dob FROM students WHERE id = ? AND class_id = ?", [studentId, classId]);
+  const student = result[0]?.values?.[0];
+
+  if (!student) {
+    studentList.innerHTML = "<tr><td colspan='3'>Student not found in this class.</td></tr>";
+    return;
+  }
+
+  const [id, name, dob] = student;
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${name}</td>
+    <td>${dob}</td>
+    <td>
+      <button class="btn btn-sm btn-outline-primary" onclick="viewPaymentHistory(${id}, '${name}')">Payments</button>
+    </td>
+  `;
+  studentList.appendChild(tr);
+}
+
+
+function renderStudents(filter = "") {
+  const studentList = document.getElementById("studentList");
+  studentList.innerHTML = "";
+
+  let query = "SELECT * FROM students WHERE class_id = ?";
+  let params = [classId];
+
+  if (filter) {
+    query += " AND name LIKE ?";
+    params.push(`%${filter}%`);
+  }
+
+  query += " ORDER BY name ASC";
+  const result = db.exec(query, params);
   const students = result[0]?.values || [];
 
   students.forEach(([id, name, dob]) => {
-    const div = document.createElement("div");
-    div.className = "col-12 col-md-6 col-lg-4 col-xl-3";
-    div.innerHTML = `
-      <div class="card p-2 shadow-sm">
-        <div class="card-body text-center">
-          <strong>${name}</strong><br>
-          DOB: ${dob}<br>
-          <button class="btn btn-sm btn-outline-primary mt-2 ms-1" onclick="viewPaymentHistory(${id},'${name}')">Payments</button>
-        </div>
-      </div>`;
-          // <button class="btn btn-sm btn-outline-success mt-2" onclick="openPaymentModal(${id})">+ Payment</button>
-
-    studentList.appendChild(div);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${name}</td>
+      <td>${dob}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-primary" onclick="viewPaymentHistory(${id}, '${name}')">Payments</button>
+      </td>
+    `;
+    studentList.appendChild(tr);
   });
 }
+
 
 function showAddStudentModal() {
   new bootstrap.Modal(document.getElementById("addStudentModal")).show();
@@ -84,6 +146,7 @@ function submitNewStudent(event) {
   db.run(`INSERT INTO students (name, dob, class_id) VALUES (?, ?, ?)`, [name, dob, classId]);
   saveToLocal();
   bootstrap.Modal.getInstance(document.getElementById("addStudentModal")).hide();
+  event.target.reset();
   renderStudents();
 }
 
@@ -160,4 +223,30 @@ function hideHistoryModal() {
 
 function setName(name) {
   nameL = name;
+}
+
+function filterStudentTable() {
+  const input = document.getElementById("classSearchInput").value.toLowerCase();
+  const rows = document.querySelectorAll("#studentList tr");
+  let visibleCount = 0;
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const matches = text.includes(input);
+    row.style.display = matches ? "" : "none";
+    if (matches) visibleCount++;
+  });
+
+  // Check if "no result" row exists
+  let noRow = document.getElementById("no-students-row");
+  if (visibleCount === 0) {
+    if (!noRow) {
+      noRow = document.createElement("tr");
+      noRow.id = "no-students-row";
+      noRow.innerHTML = `<td colspan="3" class="text-center text-muted">No students found</td>`;
+      document.getElementById("studentList").appendChild(noRow);
+    }
+  } else if (noRow) {
+    noRow.remove();
+  }
 }
